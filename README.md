@@ -58,6 +58,7 @@
 
 - **端到端加密**：完整的 SSH-2.0 协议实现，包括 ECDH 密钥交换、Ed25519 签名认证以及 AES-256-GCM 数据加密。
 - **安全加固体系**：内置针对 IPv6 与保留地址的 SSRF 防护、API 请求频率限制（防爆破），并在本地使用 AES-GCM 算法加密存储您的服务器凭证。
+- **人机验证**：支持 Cloudflare Turnstile 验证，防止恶意机器人滥用。
 - **隔离的会话状态**：借助 Cloudflare Durable Objects 和 Hibernation API，每个终端会话都在沙盒内安全、持久地运行。
 
 <a id="features"></a>
@@ -133,6 +134,18 @@ flowchart TB
    ```
 
 部署完成后，Wrangler 会输出你的 Worker URL。打开浏览器访问该 URL，即可开始使用你的 Web SSH 终端。
+
+#### 可选：配置 Turnstile 人机验证
+
+为防止恶意机器人滥用，建议启用 Cloudflare Turnstile 验证：
+
+1. **创建 Turnstile Widget**：登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)，进入 Turnstile 页面创建一个新的 Widget。
+2. **获取密钥**：创建后会获得一个 **Site Key**（公开）和一个 **Secret Key**（保密）。
+3. **配置环境变量**：
+   - **方式一部署**：在 Cloudflare Dashboard 的 Workers 设置中，添加环境变量 `TURNSTILE_SECRET`，值为你的 Secret Key。
+   - **方式二部署**：取消 `wrangler.toml` 中 `TURNSTILE_SECRET` 的注释，填入你的 Secret Key。
+4. **更新前端代码**：在 `frontend/src/auth-form.ts` 中，将 `sitekey` 替换为你的 Site Key。
+5. **重新部署**：运行部署命令使配置生效。
 
 <a id="development"></a>
 ## 开发说明

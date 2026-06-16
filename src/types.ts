@@ -52,6 +52,7 @@ export interface Env {
   SSH_SESSION: DurableObjectNamespace;
   MAX_CONNECTIONS?: string;
   IDLE_TIMEOUT?: string;
+  TURNSTILE_SECRET?: string;
 }
 
 export const SSH_MSG_DISCONNECT = 1;

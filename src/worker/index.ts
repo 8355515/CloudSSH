@@ -19,6 +19,20 @@ function isRateLimited(ip: string): boolean {
   return entry.count > RATE_LIMIT_MAX;
 }
 
+async function verifyTurnstile(token: string, secret: string, ip: string): Promise<boolean> {
+  try {
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `secret=${secret}&response=${token}&remoteip=${ip}`,
+    });
+    const result = await response.json<{ success: boolean }>();
+    return result.success === true;
+  } catch {
+    return false;
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -29,11 +43,31 @@ export default {
       if (isRateLimited(clientIP)) {
         return new Response('Too Many Requests', { status: 429 });
       }
+
+      // Verify Turnstile token if secret is configured
+      if (env.TURNSTILE_SECRET) {
+        const turnstileToken = url.searchParams.get('turnstile_token');
+        if (!turnstileToken) {
+          return Response.json({ error: 'Missing Turnstile token' }, { status: 403 });
+        }
+        const isValid = await verifyTurnstile(turnstileToken, env.TURNSTILE_SECRET, clientIP);
+        if (!isValid) {
+          return Response.json({ error: 'Turnstile verification failed' }, { status: 403 });
+        }
+      }
+
       return handleSSHConnection(request, env);
     }
 
     if (url.pathname === '/api/health') {
       return Response.json({ status: 'ok', timestamp: Date.now() });
+    }
+
+    // Return Turnstile site key (public info)
+    if (url.pathname === '/api/config') {
+      return Response.json({
+        turnstileEnabled: !!env.TURNSTILE_SECRET,
+      });
     }
 
     return new Response(HTML, {

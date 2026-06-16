@@ -43,11 +43,50 @@ async function decryptCredentials(stored: string): Promise<{ host: string; port:
 
 export class ConnectionForm {
   private terminal: SSHTerminal;
+  private turnstileEnabled = false;
+  private turnstileToken: string | null = null;
+  private turnstileWidgetId: string | null = null;
 
   constructor(terminal: SSHTerminal) {
     this.terminal = terminal;
     this.render();
     this.loadSavedCredentials();
+    this.checkTurnstileConfig();
+  }
+
+  private async checkTurnstileConfig(): Promise<void> {
+    try {
+      const response = await fetch('/api/config');
+      const config = (await response.json()) as { turnstileEnabled: boolean };
+      this.turnstileEnabled = config.turnstileEnabled;
+      if (this.turnstileEnabled) {
+        this.renderTurnstile();
+      }
+    } catch {
+      // Config endpoint not available, skip Turnstile
+    }
+  }
+
+  private renderTurnstile(): void {
+    const container = document.getElementById('turnstile-widget');
+    if (!container || !window.turnstile) return;
+
+    const wrapper = document.getElementById('turnstile-container');
+    if (wrapper) wrapper.style.display = 'block';
+
+    this.turnstileWidgetId = window.turnstile.render(container, {
+      sitekey: '0x4AAAAAAB' + 'placeholder', // User needs to replace with their site key
+      theme: 'dark',
+      callback: (token: string) => {
+        this.turnstileToken = token;
+      },
+      'expired-callback': () => {
+        this.turnstileToken = null;
+      },
+      'error-callback': () => {
+        this.turnstileToken = null;
+      },
+    });
   }
 
   private render(): void {
@@ -93,6 +132,9 @@ export class ConnectionForm {
           <div id="auth-key-section" style="display:none;">
             <textarea id="private-key" class="terminal-input text-[11px] w-full" rows="5" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...粘贴 Ed25519 私钥内容...&#10;-----END OPENSSH PRIVATE KEY-----" style="resize:vertical;border:1px solid #3c4b36;padding:8px;"></textarea>
           </div>
+        </div>
+        <div id="turnstile-container" style="display:none;">
+          <div id="turnstile-widget" class="flex justify-center"></div>
         </div>
         <div class="flex items-center gap-2 mt-2">
           <input type="checkbox" id="remember-me" class="accent-[#4af626] w-4 h-4 cursor-pointer">
@@ -201,6 +243,12 @@ export class ConnectionForm {
       return;
     }
 
+    // Check Turnstile if enabled
+    if (this.turnstileEnabled && !this.turnstileToken) {
+      alert('请完成人机验证');
+      return;
+    }
+
     // Save or clear credentials
     if (remember) {
       const encrypted = await encryptCredentials({ host, port: port.toString(), username, password, privateKey, authMethod: this.authMode === 'key' ? 'publickey' : 'password' });
@@ -223,7 +271,15 @@ export class ConnectionForm {
     this.terminal.mount();
 
     try {
-      await this.terminal.connect({ host, port, username, password, authMethod: this.authMode === 'key' ? 'publickey' : 'password', privateKey });
+      await this.terminal.connect({
+        host,
+        port,
+        username,
+        password,
+        authMethod: this.authMode === 'key' ? 'publickey' : 'password',
+        privateKey,
+        turnstileToken: this.turnstileToken,
+      });
     } catch (error) {
       termSection.classList.add('hidden');
       termSection.classList.remove('flex');

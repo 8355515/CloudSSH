@@ -58,6 +58,7 @@
 
 - **End-to-End Encryption**: Complete implementation of the SSH-2.0 protocol, including ECDH key exchange, Ed25519 signature authentication, and AES-256-GCM data encryption.
 - **Security Hardening**: Built-in SSRF protection against IPv6 and reserved IPs, API rate limiting (anti-brute force), and local AES-GCM encryption for your stored server credentials.
+- **Human Verification**: Supports Cloudflare Turnstile verification to prevent malicious bot abuse.
 - **Isolated Session State**: Leveraging Cloudflare Durable Objects and the Hibernation API, every terminal session runs securely and persistently within its sandbox.
 
 <a id="features"></a>
@@ -133,6 +134,18 @@ flowchart TB
    ```
 
 Once deployed, Wrangler will output your Worker URL. Open that URL in your browser to start using your Web SSH terminal.
+
+#### Optional: Configure Turnstile Human Verification
+
+To prevent malicious bot abuse, it is recommended to enable Cloudflare Turnstile verification:
+
+1. **Create Turnstile Widget**: Log in to [Cloudflare Dashboard](https://dash.cloudflare.com/), go to the Turnstile page and create a new Widget.
+2. **Get Keys**: After creation, you will receive a **Site Key** (public) and a **Secret Key** (private).
+3. **Configure Environment Variables**:
+   - **Method 1 (GitHub)**: In the Cloudflare Dashboard Workers settings, add environment variable `TURNSTILE_SECRET` with your Secret Key.
+   - **Method 2 (CLI)**: Uncomment `TURNSTILE_SECRET` in `wrangler.toml` and enter your Secret Key.
+4. **Update Frontend Code**: In `frontend/src/auth-form.ts`, replace `sitekey` with your Site Key.
+5. **Redeploy**: Run the deployment command to apply the configuration.
 
 <a id="development"></a>
 ## Development

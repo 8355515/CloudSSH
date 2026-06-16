@@ -5,6 +5,11 @@ compatibility_flags = ["nodejs_compat"]
 # no_bundle = true
 workers_dev = false
 
+# Turnstile 验证（可选）
+# 在 Cloudflare Dashboard 中创建 Turnstile Widget 后，将 Secret Key 配置为环境变量
+# [vars]
+# TURNSTILE_SECRET = "your-turnstile-secret-key"
+
 [[routes]]
 pattern = "ssh.newbietan.cn"
 custom_domain = true
