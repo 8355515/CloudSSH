@@ -56,8 +56,8 @@ export class ZmodemHandler {
       }
 
       const packets: Uint8Array[] = [];
-      xfer.on('input', (payload: Uint8Array) => {
-        packets.push(payload);
+      xfer.on('input', (payload: number[]) => {
+        packets.push(new Uint8Array(payload));
       });
 
       xfer.accept().then(() => {
